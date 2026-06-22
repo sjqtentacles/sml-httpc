@@ -1,0 +1,10 @@
+(* MLB for the sml-httpc pure core: the vendored sml-http codec (which itself
+ * vendors sml-uri, giving Headers / Http / Uri) loaded first, then the client
+ * state machine.
+ *
+ * Brought in WITHOUT a `local` wrapper so consumers (tests, examples, the
+ * sml-httpc-tool driver) can use Http / Headers / Uri alongside Httpc. *)
+$(SML_LIB)/basis/basis.mlb
+../lib/github.com/sjqtentacles/sml-http/sml-http.mlb
+httpc.sig
+httpc.sml

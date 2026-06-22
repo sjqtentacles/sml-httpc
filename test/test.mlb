@@ -1,0 +1,11 @@
+(* Test executable basis: the httpc library (which pulls in the vendored
+ * sml-http + sml-uri) plus the harness, fixtures and runner. *)
+$(SML_LIB)/basis/basis.mlb
+../src/httpc.mlb
+harness.sml
+support.sml
+test_build.sml
+test_decode.sml
+test_redirect.sml
+entry.sml
+main.sml
