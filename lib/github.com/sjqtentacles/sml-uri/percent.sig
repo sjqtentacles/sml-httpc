@@ -16,4 +16,10 @@ sig
      decode '+' -> space. *)
   val encodeForm : string -> string
   val decodeForm : string -> string
+
+  (* RFC 3986 6.2.2.1/6.2.2.2 percent-encoding normalization: decode any %XX
+     whose byte is an unreserved character, and uppercase the hex digits of
+     the remaining (still-encoded) %XX sequences. Lone/short '%' left as-is.
+     E.g. "%7e" -> "~", "%2f" -> "%2F". *)
+  val normalize : string -> string
 end

@@ -50,4 +50,28 @@ struct
 
   fun decode s = decodeWith false s
   fun decodeForm s = decodeWith true s
+
+  fun normalize s =
+    let
+      val n = String.size s
+      fun loop i acc =
+        if i >= n then String.implode (List.rev acc)
+        else
+          let val c = String.sub (s, i) in
+            if c = #"%" andalso i + 2 < n then
+              (case (hexVal (String.sub (s, i+1)), hexVal (String.sub (s, i+2))) of
+                   (SOME hi, SOME lo) =>
+                     let val b = Char.chr (hi * 16 + lo) in
+                       if isUnreserved b then loop (i + 3) (b :: acc)
+                       else loop (i + 3)
+                              (Char.toUpper (String.sub (s, i+2))
+                               :: Char.toUpper (String.sub (s, i+1))
+                               :: #"%" :: acc)
+                     end
+                 | _ => loop (i + 1) (c :: acc))
+            else loop (i + 1) (c :: acc)
+          end
+    in
+      loop 0 []
+    end
 end

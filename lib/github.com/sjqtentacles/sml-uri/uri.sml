@@ -160,6 +160,101 @@ struct
 
   fun resolveStr base ref' = toString (resolve (parse base) (parse ref'))
 
+  fun toLower s = String.map Char.toLower s
+
+  fun defaultPort scheme =
+    case scheme of
+        SOME "http"  => SOME "80"
+      | SOME "https" => SOME "443"
+      | SOME "ftp"   => SOME "21"
+      | SOME "ws"    => SOME "80"
+      | SOME "wss"   => SOME "443"
+      | _            => NONE
+
+  (* Split authority into host and optional port, respecting an IPv6 literal
+     in [brackets] (whose internal colons are not the port delimiter). *)
+  fun splitHostPort hp =
+    if String.isPrefix "[" hp then
+      let
+        val n = String.size hp
+        fun close i =
+          if i >= n then NONE
+          else if String.sub (hp, i) = #"]" then SOME i
+          else close (i + 1)
+      in
+        case close 0 of
+            SOME i =>
+              let
+                val host = String.substring (hp, 0, i + 1)
+                val rest = String.extract (hp, i + 1, NONE)
+              in
+                if String.isPrefix ":" rest
+                then (host, SOME (String.extract (rest, 1, NONE)))
+                else (host, NONE)
+              end
+          | NONE => (hp, NONE)
+      end
+    else
+      (case splitFirst ":" hp of
+           (whole, NONE) => (whole, NONE)
+         | (h, SOME p) => (h, SOME p))
+
+  fun normalizeAuthority scheme auth =
+    let
+      val (userinfo, hostport) =
+        case splitFirst "@" auth of
+            (whole, NONE) => (NONE, whole)
+          | (ui, SOME hp) => (SOME ui, hp)
+      val (host, port) = splitHostPort hostport
+      val host' = toLower host
+      val port' =
+        case port of
+            NONE => NONE
+          | SOME "" => NONE
+          | SOME p => if SOME p = defaultPort scheme then NONE else SOME p
+      val hp' = host' ^ (case port' of SOME p => ":" ^ p | NONE => "")
+    in
+      (case userinfo of SOME ui => Percent.normalize ui ^ "@" | NONE => "") ^ hp'
+    end
+
+  fun normalize ({ scheme, authority, path, query, fragment } : uri) =
+    let
+      val scheme' = Option.map toLower scheme
+    in
+      { scheme    = scheme'
+      , authority = Option.map (normalizeAuthority scheme') authority
+      , path      = removeDotSegments (Percent.normalize path)
+      , query     = Option.map Percent.normalize query
+      , fragment  = Option.map Percent.normalize fragment }
+    end
+
+  fun relativize (base : uri) (target : uri) : uri =
+    if #scheme base <> #scheme target orelse #authority base <> #authority target
+    then target
+    else
+      let val bp = #path base and tp = #path target in
+        if String.isPrefix bp tp then
+          { scheme = NONE, authority = NONE
+          , path = String.extract (tp, String.size bp, NONE)
+          , query = #query target, fragment = #fragment target }
+        else target
+      end
+
+  fun withPath ({ scheme, authority, query, fragment, ... } : uri) p =
+    { scheme = scheme, authority = authority, path = p, query = query, fragment = fragment }
+
+  fun withQuery ({ scheme, authority, path, fragment, ... } : uri) q =
+    { scheme = scheme, authority = authority, path = path, query = SOME q, fragment = fragment }
+
+  fun withFragment ({ scheme, authority, path, query, ... } : uri) f =
+    { scheme = scheme, authority = authority, path = path, query = query, fragment = SOME f }
+
+  fun withoutQuery ({ scheme, authority, path, fragment, ... } : uri) =
+    { scheme = scheme, authority = authority, path = path, query = NONE, fragment = fragment }
+
+  fun withoutFragment ({ scheme, authority, path, query, ... } : uri) =
+    { scheme = scheme, authority = authority, path = path, query = query, fragment = NONE }
+
   fun queryParams (u : uri) =
     case #query u of NONE => [] | SOME q => Query.parse q
 end

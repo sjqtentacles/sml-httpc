@@ -126,6 +126,32 @@ struct
                          ("Content-Length", Int.toString (String.size body))])
       body
 
+  fun html body =
+    response 200
+      (Headers.fromList [("Content-Type", "text/html; charset=utf-8"),
+                         ("Content-Length", Int.toString (String.size body))])
+      body
+
+  fun redirectWith code location =
+    response code (Headers.fromList [("Location", location)]) ""
+
+  fun redirect location = redirectWith 302 location
+
+  fun request' method target headers body =
+    { method = method, target = target, version = "HTTP/1.1"
+    , headers = headers, body = body }
+
+  fun get target = request' "GET" target Headers.empty ""
+  fun delete target = request' "DELETE" target Headers.empty ""
+
+  fun withBody method target body =
+    request' method target
+      (Headers.fromList [("Content-Length", Int.toString (String.size body))])
+      body
+
+  fun post target body = withBody "POST" target body
+  fun put target body = withBody "PUT" target body
+
   (* ---- framing ---- *)
 
   fun hexToInt s =

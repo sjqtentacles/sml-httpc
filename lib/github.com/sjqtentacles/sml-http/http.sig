@@ -41,6 +41,21 @@ sig
   val response : int -> Headers.headers -> string -> response
   (* A simple text/plain response. *)
   val text     : int -> string -> response
+  (* A 200 text/html response (Content-Type text/html; charset=utf-8 plus
+     Content-Length). *)
+  val html     : string -> response
+  (* A 302 Found response carrying the given Location and an empty body. *)
+  val redirect : string -> response          (* redirect location *)
+  (* A redirect with an explicit 3xx status code and Location. *)
+  val redirectWith : int -> string -> response   (* redirectWith code location *)
+
+  (* Request builders. The version defaults to "HTTP/1.1"; `target` is the raw
+     request-target (path[?query]). `post`/`put` set Content-Length from the
+     body. *)
+  val get    : string -> request                 (* get target *)
+  val delete : string -> request                 (* delete target *)
+  val post   : string -> string -> request       (* post target body *)
+  val put    : string -> string -> request       (* put target body *)
 
   (* Framing decoders, given headers and the raw bytes after the head.
      decodeBody returns the message body honoring Transfer-Encoding: chunked
