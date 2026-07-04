@@ -79,6 +79,35 @@ struct
       val () = check "finish on truncated body -> Failed" (isFailed truncated)
       val malformed = Httpc.feed (newGet ()) "NOT-A-STATUS-LINE\r\n\r\n"
       val () = check "malformed head -> Failed" (isFailed malformed)
+
+      val () = section "oversized Content-Length (untrusted numeric input)"
+      (* A Content-Length past 2^31 must not crash the decoder. On this
+         toolchain MLton's Int is 32-bit and Poly/ML's is 63-bit (both fixed
+         width; only IntInf is arbitrary), so an unchecked Int.fromString would
+         raise Overflow on MLton and diverge from Poly/ML. The documented
+         failure for an unusable Content-Length is NONE, so the decoder degrades
+         to close-delimited framing (keepAlive=false). Wrap in a handler so a
+         raise surfaces as a clean FAIL rather than aborting the binary. *)
+      fun safeFeed s = Httpc.feed (newGet ()) s handle _ => Httpc.Failed "RAISED"
+      fun safeFinishOf p = (case p of Httpc.NeedMore cn => Httpc.finish cn | q => q)
+                           handle _ => Httpc.Failed "RAISED"
+      val big31 = "HTTP/1.1 200 OK\r\nContent-Length: 2147483648\r\n\r\nbody-bytes"
+      val big12 = "HTTP/1.1 200 OK\r\nContent-Length: 999999999999\r\n\r\nbody-bytes"
+      val r31 = safeFeed big31
+      val () = check "Content-Length 2^31: does not raise, NeedMore" (isNeedMore r31)
+      val r31done = safeFinishOf r31
+      val () = check "Content-Length 2^31: finishes close-delimited" (isComplete r31done)
+      val () = checkString "Content-Length 2^31: body is the rest"
+                 ("SOME body-bytes", optBody r31done)
+      val () = checkString "Content-Length 2^31: not keep-alive"
+                 ("SOME false", optKa r31done)
+      val r12 = safeFeed big12
+      val () = check "Content-Length 12 digits: does not raise, NeedMore" (isNeedMore r12)
+      val r12done = safeFinishOf r12
+      val () = check "Content-Length 12 digits: finishes close-delimited" (isComplete r12done)
+      (* A normal, in-range Content-Length still frames exactly. *)
+      val rok = safeFeed "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhelloEXTRA"
+      val () = checkString "normal Content-Length still frames" ("SOME hello", optBody rok)
     in () end
 
   and optBody p = (case bodyOf p of SOME b => "SOME " ^ b | NONE => "NONE")

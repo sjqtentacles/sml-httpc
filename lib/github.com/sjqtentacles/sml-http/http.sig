@@ -27,7 +27,11 @@ sig
      headers. The body is taken verbatim (caller may re-frame via the
      helpers below). *)
   val parseRequest  : string -> request option
-  (* Parse a complete response message. *)
+  (* Parse a complete response message. The status code is range-checked via
+     IntInf (bounded to a fixed 32-bit signed range): an oversized or
+     non-numeric code yields NONE rather than raising Overflow, so behaviour is
+     identical under MLton (32-bit Int) and Poly/ML (63-bit Int); both are
+     fixed width, only IntInf is arbitrary precision. *)
   val parseResponse : string -> response option
 
   (* Serialize back to wire form (CRLF line endings). *)
@@ -59,7 +63,10 @@ sig
 
   (* Framing decoders, given headers and the raw bytes after the head.
      decodeBody returns the message body honoring Transfer-Encoding: chunked
-     or Content-Length; if neither is present the whole input is the body. *)
+     or Content-Length; if neither is present the whole input is the body.
+     A Content-Length value is range-checked via IntInf (bounded to a fixed
+     32-bit signed range): an oversized or non-numeric value yields NONE rather
+     than raising Overflow, keeping MLton and Poly/ML in agreement. *)
   val decodeBody   : Headers.headers -> string -> string option
   val decodeChunked : string -> string option
   (* Encode a body as chunked transfer-coding. *)

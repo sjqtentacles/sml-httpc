@@ -24,8 +24,15 @@ both [MLton](http://mlton.org/) and [Poly/ML](https://www.polyml.org/).
 
 ## Status
 
-- 44 assertions, green on MLton and Poly/ML (byte-identical output).
+- 51 assertions, green on MLton and Poly/ML (byte-identical output).
 - Vendors `sml-http` + `sml-uri` (Layout B), so the repo builds standalone.
+- **Robust `Content-Length` parsing.** The decoder range-checks the
+  `Content-Length` header via `IntInf`, bounded to a fixed 32-bit signed range:
+  an oversized value degrades to close-delimited framing (the documented
+  failure) instead of raising `Overflow`. On this toolchain MLton's `Int` is
+  32-bit and Poly/ML's is 63-bit (both fixed width; only `IntInf` is arbitrary
+  precision), so an unchecked parse would crash on MLton and diverge from
+  Poly/ML.
 - Covered behaviour:
   - **buildRequest** — origin-form request-target, `Host` derived from the URL
     authority (userinfo stripped), default ports (80/443), automatic

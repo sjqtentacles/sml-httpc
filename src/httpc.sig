@@ -52,7 +52,12 @@ sig
     | Complete of { response : Http.response, leftover : string, keepAlive : bool }
     | Failed of string
 
-  (* Feed received bytes into the decoder. *)
+  (* Feed received bytes into the decoder. A Content-Length header is
+     range-checked via IntInf (bounded to a fixed 32-bit signed range): an
+     oversized or non-numeric value is treated as absent (close-delimited
+     framing) rather than raising Overflow, so behaviour is identical under
+     MLton (32-bit Int) and Poly/ML (63-bit Int); both are fixed width, only
+     IntInf is arbitrary precision. *)
   val feed : conn -> string -> progress
 
   (* Signal that the peer closed the connection (end of stream). Completes a

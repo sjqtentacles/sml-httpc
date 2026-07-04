@@ -15,6 +15,18 @@ struct
     Substring.string (Substring.dropr Char.isSpace
       (Substring.dropl Char.isSpace (Substring.full s)))
 
+  (* Parse an int from untrusted input without ever raising Overflow. On this
+     toolchain MLton's Int is 32-bit and Poly/ML's is 63-bit (both fixed
+     width; only IntInf is arbitrary), so a plain Int.fromString raises
+     Overflow on MLton for a value past 2^31 while Poly/ML would accept it: a
+     crash and a cross-compiler divergence. Parse via IntInf and bound to a
+     fixed 32-bit signed range so both compilers behave identically. *)
+  fun parseIntBounded s =
+    case IntInf.fromString s of
+        SOME n => if n >= ~2147483648 andalso n <= 2147483647
+                  then SOME (IntInf.toInt n) else NONE
+      | NONE => NONE
+
   fun findChar c s =
     let val n = String.size s
         fun go i = if i >= n then NONE
@@ -200,7 +212,7 @@ struct
                    | NONE => false)
                 val clOpt =
                   (case Headers.get hdrs "Content-Length" of
-                     SOME v => Int.fromString (trim v)
+                     SOME v => parseIntBounded (trim v)
                    | NONE => NONE)
                 val noBody = isHead method orelse statusNoBody (#status resp)
                 val ka = keepAlive resp
