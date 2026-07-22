@@ -1,5 +1,7 @@
 # sml-httpc
 
+[![CI](https://github.com/sjqtentacles/sml-httpc/actions/workflows/ci.yml/badge.svg)](https://github.com/sjqtentacles/sml-httpc/actions/workflows/ci.yml)
+
 A **pure, sans-IO HTTP/1.1 client state machine** in Standard ML, layered on
 the pure [`sml-http`](https://github.com/sjqtentacles/sml-http) message codec
 (which vendors [`sml-uri`](https://github.com/sjqtentacles/sml-uri)).
